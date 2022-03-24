@@ -1,0 +1,37 @@
+-------------------------------START
+0 0.000000 0.000000 create_table 10
+173000 173.000000 0.000000 wc_files files/big.txt files/big.txt files/big.txt files/big.txt files/small.txt files/small.txt files/small.txt  7
+18000 18.000000 0.000000 save 6
+0 0.000000 0.000000 remove_block 6
+-------------------------------------TOTALTIME:191000 191.000000 0.000000
+-------------------------------START
+0 0.000000 0.000000 create_table 10
+69000 69.000000 0.000000 wc_files files/big.txt files/big.txt files/big.txt files/big.txt files/small.txt files/small.txt files/small.txt  7
+0 0.000000 0.000000 save 6
+0 0.000000 0.000000 remove_block 6
+-------------------------------------TOTALTIME:69000 69.000000 0.000000
+-------------------------------START
+0 0.000000 0.000000 create_table 10
+195000 195.000000 0.000000 wc_files files/medium.txt files/medium.txt files/medium.txt files/medium.txt files/small.txt files/small.txt files/small.txt  7
+2000 2.000000 0.000000 save 6
+0 0.000000 0.000000 remove_block 6
+-------------------------------------TOTALTIME:197000 197.000000 0.000000
+-------------------------------START
+0 0.000000 0.000000 create_table 10
+38000 37.000000 0.000000 wc_files files/medium.txt files/medium.txt  2
+2000 2.000000 0.000000 save 2
+50000 50.000000 0.000000 wc_files files/medium.txt files/medium.txt  2
+0 0.000000 0.000000 save 2
+0 0.000000 0.000000 remove_block 4
+29000 29.000000 0.000000 wc_files files/small.txt files/small.txt files/small.txt  3
+-------------------------------START
+0 0.000000 0.000000 create_table 10
+130000 130.000000 0.000000 wc_files files/medium.txt files/medium.txt  2
+0 0.000000 0.000000 save 2
+45000 46.000000 0.000000 wc_files files/medium.txt files/medium.txt  2
+0 0.000000 0.000000 save 2
+0 0.000000 0.000000 remove_block 4
+28000 28.000000 0.000000 wc_files files/small.txt files/small.txt files/small.txt  3
+0 0.000000 0.000000 save 3
+0 0.000000 0.000000 remove_block 7
+-------------------------------------TOTALTIME:203000 204.000000 0.000000

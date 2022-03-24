@@ -1,0 +1,4 @@
+  1050   3150  66150 files/small.txt
+  1050   3150  66150 files/small.txt
+  1050   3150  66150 files/small.txt
+  3150   9450 198450 total
