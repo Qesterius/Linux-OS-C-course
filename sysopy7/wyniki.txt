@@ -1,0 +1,17 @@
+N M    time       pizzas    pizzas               posix/systemv
+6 3 in 60 seconds 15 delivered 185979320 pizzas. /POSIX
+3 3 in 60 seconds 15 delivered 373204712 pizzas. /POSIX
+3 6 in 60 seconds 21 delivered 756023368 pizzas. /POSIX
+3 6 in 60 seconds delivered 21 pizzas. /SYSTEMV
+6 3 in 60 seconds delivered 15 pizzas. /SYSTEMV
+3 3 in 60 seconds delivered 15 pizzas. /SYSTEMV
+
+
+w wierszach posix ostatnia liczba jest smieciem. liczba pizz to przezdostatnia
+3 3 - 15 15
+6 3 - 15 15
+3 6 - 21 21
+wyniki dla obu sa takie same
+
+50 50 in 60 seconds delivered 50 pizzas. /SYSTEMV
+50 50 in 60 seconds 50 delivered -1898370536 pizzas. /POSIX

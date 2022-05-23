@@ -1,12 +1,22 @@
 #include "constants.h"
-
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <fcntl.h>           /* For O_* constants */
+#include <sys/stat.h>        /* For mode constants */
+#include <semaphore.h>
+#include <sys/errno.h>
+#ifndef NULL
+#define NULL 0
+#endif
 int nChefs;
 int nDeliverers;
+sem_t** semafors;
+
 int semafors_ID, ovenMemID, tableMemID;
 struct Entity* oven;
 struct Entity* table;
 
-
+int getSemVal();
 union semun 
 {
     int              val;    /* Value for SETVAL */
@@ -18,61 +28,77 @@ union semun
 
 void sigintHandler(int signum)
 {
-    semctl(semafors_ID, 0, IPC_RMID, NULL);
-    shmctl(ovenMemID, IPC_RMID, NULL);
-    shmctl(tableMemID, IPC_RMID, NULL);
-}
-int createShm(int projID_KEY)
-{
-    key_t key = ftok(getenv("HOME"), projID_KEY);
-    int shm = shmget(key, ENTITY_SIZE, IPC_CREAT | PERMISSIONS);
-    struct Entity* entity = shmat(shm,NULL,0);
+    for(int i=0;i<CAPACITY;i++)
+    {
+        sem_close(semafors[i]);
+    }
+    sem_unlink("w_oven");
+    sem_unlink("w_table");
+    sem_unlink("taken_table");
+    sem_unlink("delivered_pizzas");
+    sem_unlink("left_oven");
+    sem_unlink("left_table");
 
+    munmap(oven,sizeof(struct Entity));
+    munmap(table,sizeof(struct Entity));
+    shm_unlink("/oven");
+    shm_unlink("/table");
+
+}
+int createShm(char* name)
+{
+    int shm = shm_open(name, O_CREAT|O_RDWR,PERMISSIONS);
+    if(shm==-1)
+        {
+            puts("cant create shm");
+            exit(-1);
+        }
+    puts("shm_open ... correct");
+    if(ftruncate(shm,sizeof(struct Entity))==-1)
+        {puts("CANT TRUNCATE POSIX SHM");exit(-1);}
+    
+    struct Entity* entity =(struct Entity*) mmap(NULL,sizeof(struct Entity),PROT_READ|PROT_WRITE,MAP_SHARED,shm,0);
+    puts("created entity");
+//c,d,e
+    printf(" Value of errno: %d\n ", errno);
+    printf("%d, %d\n",entity,shm);
+    fflush(stdout);
     for(int i=0;i<CAPACITY;i++)
         entity->pizza[i] = -1;
     entity->toPut = 0;
     entity->toTake = 0;
     entity->pizzasInside=0;
 
+    
+    puts("initialized");
+    fflush(stdout);
     return shm;
 }
 int createSemasphores()
 {
-    key_t key = ftok(getenv("HOME"), 'S');
-    semafors_ID = semget(key, 6 ,IPC_CREAT | PERMISSIONS);
+    semafors = malloc(sizeof(sem_t*)*6);
+    semafors[SEM_WORKING_OVEN] = sem_open("w_oven",O_CREAT,PERMISSIONS,1);
+    semafors[SEM_WORKING_TABLE] = sem_open("w_table",O_CREAT,PERMISSIONS,1);
 
-    union semun arg;
-    arg.val = 0;
-    semctl(semafors_ID,SEM_TAKEN_SPACE_TABLE,SETVAL,arg);
-    semctl(semafors_ID,SEM_DELIVERED_PIZZAS,SETVAL,arg);
+    semafors[SEM_TAKEN_SPACE_TABLE] = sem_open("taken_table",O_CREAT,PERMISSIONS,0);
+    semafors[SEM_DELIVERED_PIZZAS] = sem_open("delivered_pizzas",O_CREAT,PERMISSIONS,0);
 
+    semafors[SEM_LEFT_SPACE_OVEN] = sem_open("left_oven",O_CREAT,PERMISSIONS,CAPACITY);
+    semafors[SEM_LEFT_SPACE_TABLE] = sem_open("left_table",O_CREAT,PERMISSIONS,CAPACITY);
 
-    arg.val = 1;
-    semctl(semafors_ID,SEM_WORKING_OVEN,SETVAL,arg);
-    semctl(semafors_ID,SEM_WORKING_TABLE,SETVAL,arg);
-
-    arg.val = CAPACITY;
-    semctl(semafors_ID,SEM_LEFT_SPACE_OVEN,SETVAL,arg);
-    semctl(semafors_ID,SEM_LEFT_SPACE_TABLE,SETVAL,arg);
-
-    printf("Created semaphores: %d\n", semafors_ID);
+    for(int i=0;i<CAPACITY;i++)
+        printf("value of %d: %d\n",i,getSemVal(i));
+    printf("Created semaphores\n");
+    fflush(stdout);
 }
 void closeSEMLOCK(int lock)
 {
-            struct sembuf buff;
-            buff.sem_num = lock;
-            buff.sem_op = -1;
-
-            semop(semafors_ID,&buff,1);
+            sem_wait(semafors[lock]);
             return;
 }
 void openSEMLOCK(int lock)
 {
-            struct sembuf buff;
-            buff.sem_num = lock;
-            buff.sem_op = 1;
-
-            semop(semafors_ID,&buff,1);
+            sem_post(semafors[lock]);
             return;
 }
 int getRandomNumber(int max)
@@ -80,6 +106,12 @@ int getRandomNumber(int max)
     struct timeval currTime;
     gettimeofday(&currTime, NULL);
     return (currTime.tv_sec*getpid())%max;
+}
+int getSemVal(int lock)
+{
+    int val =0;
+    sem_getvalue(semafors[lock],&val);
+    return val;
 }
 char* getCurrTime()
 {
@@ -108,11 +140,15 @@ int main(int argc, char* argv[])
 
     
     printf("WITAMY W LOS PAPITOS\nDzisiaj obsluga liczy %d kucharzy i %d dostawcow.\n",nChefs,nDeliverers);   
-    ovenMemID = createShm('O');
-    tableMemID = createShm('T');
-    oven  = shmat(ovenMemID,NULL,0);
-    table = shmat(tableMemID,NULL,0);
+    ovenMemID = createShm("/oven");
+    tableMemID = createShm("/table");
+    oven  = mmap(NULL,sizeof(struct Entity),PROT_READ|PROT_WRITE,MAP_SHARED,ovenMemID,0);
+shmat(ovenMemID,NULL,0);
+    table = mmap(NULL,sizeof(struct Entity),PROT_READ|PROT_WRITE,MAP_SHARED,tableMemID,0);
 
+    printf("%d %d\n",oven,table);
+    for(int i=0;i<CAPACITY;i++)
+        printf("value of %d: %d\n",i,oven->pizza[i]);
     createSemasphores();
 
     signal(SIGINT, sigintHandler);
@@ -121,7 +157,7 @@ int main(int argc, char* argv[])
     {
         FILE* raport = fopen("wyniki.txt","a");
         sleep(CONTEST_TIME);
-        fprintf(raport,"%d %d in %d seconds delivered %d pizzas. /SYSTEMV\n",nChefs,nDeliverers,CONTEST_TIME,semctl(semafors_ID,SEM_DELIVERED_PIZZAS,GETVAL));
+        fprintf(raport,"%d %d in %d seconds %d delivered %d pizzas. /POSIX\n",nChefs,nDeliverers,CONTEST_TIME,getSemVal(SEM_DELIVERED_PIZZAS));
         fclose(raport);
         printf("\n\n\n CONTEST FINISHED\n\n\n");
         exit(0);
@@ -132,6 +168,10 @@ int main(int argc, char* argv[])
         if (fork() == 0)
             { 
                 printf("IM A CHEF %d\n",getpid());
+                oven  = mmap(NULL,sizeof(struct Entity),PROT_READ|PROT_WRITE,MAP_SHARED,ovenMemID,0);
+shmat(ovenMemID,NULL,0);
+    table = mmap(NULL,sizeof(struct Entity),PROT_READ|PROT_WRITE,MAP_SHARED,tableMemID,0);
+
 
                 while(1){
 
@@ -142,7 +182,7 @@ int main(int argc, char* argv[])
                     closeSEMLOCK(SEM_LEFT_SPACE_OVEN);
 
                         closeSEMLOCK(SEM_WORKING_OVEN);
-                            printf("%d [%s] pitca wsadzana do pieca. Liczba picc w piecu: %d.\n",getpid(),getCurrTime(),CAPACITY-semctl(semafors_ID,SEM_LEFT_SPACE_OVEN,GETVAL));
+                            printf("%d [%s] pitca wsadzana do pieca. Liczba picc w piecu: %d.\n",getpid(),getCurrTime(),CAPACITY-getSemVal(SEM_LEFT_SPACE_OVEN));
                             int freeOven= oven->toPut;
                             oven->toPut = (oven->toPut+1)%CAPACITY;
             
@@ -153,16 +193,15 @@ int main(int argc, char* argv[])
                                 } 
                             
                             oven->pizza[freeOven]= myPizza;
-                            
+                        
                         openSEMLOCK(SEM_WORKING_OVEN);
-
                         sleep(COOKING_TIME);
                         //taking out    
                         closeSEMLOCK(SEM_WORKING_OVEN);
                             oven->pizza[freeOven]=-1;
                         openSEMLOCK(SEM_WORKING_OVEN);
                     openSEMLOCK(SEM_LEFT_SPACE_OVEN);
-                    printf("%d [%s] pitce wyjelem z pieca. Liczba picc w piecu: %d.\n",getpid(),getCurrTime(),CAPACITY-semctl(semafors_ID,SEM_LEFT_SPACE_OVEN,GETVAL));
+                    printf("%d [%s] pitce wyjelem z pieca. Liczba picc w piecu: %d.\n",getpid(),getCurrTime(),CAPACITY-getSemVal(SEM_LEFT_SPACE_OVEN));
 
                     
 
@@ -181,7 +220,7 @@ int main(int argc, char* argv[])
                         table->pizza[freeTable] = myPizza;
                         openSEMLOCK(SEM_WORKING_TABLE);
                     openSEMLOCK(SEM_TAKEN_SPACE_TABLE);            
-                    printf("%d [%s] pitce polozylem na stole. Liczba picc na stole: %d.\n",getpid(),getCurrTime(),semctl(semafors_ID,SEM_TAKEN_SPACE_TABLE,GETVAL));
+                    printf("%d [%s] pitce polozylem na stole. Liczba picc na stole: %d.\n",getpid(),getCurrTime(),getSemVal(SEM_TAKEN_SPACE_TABLE));
                 }    
                     
                 exit(0);
@@ -192,7 +231,12 @@ int main(int argc, char* argv[])
     for (i = 0; i < nDeliverers; ++i)
         if (fork() == 0)
             { 
+                oven  = mmap(NULL,sizeof(struct Entity),PROT_READ|PROT_WRITE,MAP_SHARED,ovenMemID,0);
+shmat(ovenMemID,NULL,0);
+    table = mmap(NULL,sizeof(struct Entity),PROT_READ|PROT_WRITE,MAP_SHARED,tableMemID,0);
+
                 printf("IM A DELIVERER %d\n",getpid()); 
+
                 while(1)
                 {
                     closeSEMLOCK(SEM_TAKEN_SPACE_TABLE);
@@ -206,7 +250,7 @@ int main(int argc, char* argv[])
                             }
                             int deliveryPizza = table->pizza[takingID];
                             table->pizza[takingID] =-1;
-                            printf("%d [%s] Wzielem pitce %d ze stolu. Liczba picc na stole: %d.\n",getpid(),getCurrTime(),deliveryPizza,semctl(semafors_ID,SEM_TAKEN_SPACE_TABLE,GETVAL));
+                            printf("%d [%s] Wzielem pitce %d ze stolu. Liczba picc na stole: %d.\n",getpid(),getCurrTime(),deliveryPizza,getSemVal(SEM_TAKEN_SPACE_TABLE));
                         openSEMLOCK(SEM_WORKING_TABLE);
                     openSEMLOCK(SEM_LEFT_SPACE_TABLE);
                     sleep(DELIVERY_TIME);
