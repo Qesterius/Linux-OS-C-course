@@ -160,6 +160,7 @@ shmat(ovenMemID,NULL,0);
         fprintf(raport,"%d %d in %d seconds %d delivered %d pizzas. /POSIX\n",nChefs,nDeliverers,CONTEST_TIME,getSemVal(SEM_DELIVERED_PIZZAS));
         fclose(raport);
         printf("\n\n\n CONTEST FINISHED\n\n\n");
+        kill()
         exit(0);
     }
 

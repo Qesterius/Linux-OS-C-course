@@ -1,0 +1,28 @@
+-O – kompilator próbuje optymalizować kod i czas wykonania, bez wykonywania operacji znacząco zwiększających czas kompilacji
+-O1 – możliwy dłuższy czas kompilacji, zużywa dużo pamięci dla dużych funkcji
+-O2 – używane jeszcze więcej opcji kompilacji, które nie powodują zwiększenia pamięci programu, w porównaniu do –O zwiększa czas kompilacji i wydajność kodu, używa wszystkich flag używanych przez –O a także dodatkowe flagi
+O3 – używa wszystkie flagi używane przez –O2, a także dodatkowe flagi
+-O0 –ogranicza czas kompilacji, wartość domyślna
+-Os – optymalizacja rozmiaru, używa wszystkie flagi –O2, które nie zwiększają kodu programu, używa też dodatkowych flag zmniejszających rozmiar kodu
+
+sleep, nanosleep, clock_getres, clock_gettime  ,clock_settime,times,
+realloc,mallinfo   /proc/<pid>/maps
+open,creat,read,write,close
+fopen,fread,fwrite,fseek,fsetpos,fgetpos,fclose,opendir,closedir,readdir,rewinddir,seekdir,
+stat,lstat,mkdir,rmdir,chdir,getcwd,chmod,chmown,link,nftw
+getpid,getrlimit,execl,execv
+wait,waitpid,
+kill,trap,raise,sigqueue,signal/sigaction,pause,alarm
+sigemptyset,sigfillset,sigaddset,sigdelset,sigismember
+sigprocmask,sigpending,sigsuspend
+Po wykonaniu funkcji fork proces potomny dziedziczy po swoim przodku wartości maski sygnałów i
+ustalenia dotyczące obsługi sygnałów.
+ Nieobsłużone sygnały procesu macierzystego są czyszczo
+
+pipe
+popen
+FILE* grep_input = popen("grep Ala", "w");
+// fputs(..., grep_input) - przesłanie danych do grep-a
+pclose(grep_input);
+
+mkfifo,mknod
